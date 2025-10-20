@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Film, Lock, ChevronLeft, ChevronRight, Sparkles, Users, Heart, Shuffle, Star, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const RecommendationsPage = () => {
+  const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeNav, setActiveNav] = useState('Recommendations');
   const [showLoginOverlay, setShowLoginOverlay] = useState(true);
@@ -11,6 +13,14 @@ const RecommendationsPage = () => {
   const [audienceScrollProgress, setAudienceScrollProgress] = useState(0);
   const [personalRecommendations, setPersonalRecommendations] = useState([]);
 const [audienceFavorites, setAudienceFavorites] = useState([]);
+
+useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      setIsLoggedIn(true);
+      setShowLoginOverlay(false);
+    }
+  }, []);
 
 
   // Mock movie data
@@ -40,6 +50,7 @@ const [audienceFavorites, setAudienceFavorites] = useState([]);
 useEffect(() => {
   const fetchRecommendations = async () => {
     try {
+      
       const token = localStorage.getItem('token'); // get token from storage
 
         const personalPosters = [
@@ -49,12 +60,12 @@ useEffect(() => {
         'https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?w=300&h=450&fit=crop',
         'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=300&h=450&fit=crop',
         'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=300&h=450&fit=crop',
-        'https://images.unsplash.com/photo-1574267432644-f74f501ec1c5?w=300&h=450&fit=crop',
+        'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=300&h=450&fit=crop',
         'https://images.unsplash.com/photo-1594908900066-3f47337549d8?w=300&h=450&fit=crop',
       ];
 
       const audiencePosters = [
-        'https://images.unsplash.com/photo-1574267432644-f74f501ec1c5?w=300&h=450&fit=crop',
+        'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=300&h=450&fit=crop',
         'https://images.unsplash.com/photo-1594908900066-3f47337549d8?w=300&h=450&fit=crop',
         'https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?w=300&h=450&fit=crop',
         'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=300&h=450&fit=crop',
@@ -98,15 +109,12 @@ useEffect(() => {
       console.error('Failed to fetch recommendations:', err);
     }
   };
-
+  
   fetchRecommendations();
 }, []);
 
-  const handleLogin = () => {
-    setIsLoggedIn(true);
-    setTimeout(() => {
-      setShowLoginOverlay(false);
-    }, 500);
+const handleLogin = () => {
+    navigate('/login'); // ✅ Redirect to your login page
   };
 
   const scroll = (ref, direction) => {
@@ -140,7 +148,7 @@ useEffect(() => {
     };
   }, []);
 
-  const navItems = ['Home', 'Search', 'Recommendations', 'Analytics'];
+  //const navItems = ['Home', 'Search', 'Recommendations', 'Analytics'];
 
   const MovieCard = ({ movie, index }) => (
     <div 
@@ -259,7 +267,7 @@ useEffect(() => {
       </div>
 
       {/* Navigation Bar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-black bg-opacity-40 backdrop-blur-lg border-b border-gray-800">
+      {/* <nav className="fixed top-0 left-0 right-0 z-50 bg-black bg-opacity-40 backdrop-blur-lg border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-2">
@@ -288,7 +296,7 @@ useEffect(() => {
             </div>
           </div>
         </div>
-      </nav>
+      </nav> */}
 
       {/* Login Overlay */}
       {showLoginOverlay && (

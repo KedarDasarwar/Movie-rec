@@ -67,7 +67,7 @@ const fetchRatings = async () => {
   fetchRatings();
 }, []);
 
-  const navItems = ['Home', 'Search', 'My Ratings', 'Recommendations', 'Analytics'];
+  //const navItems = ['Home', 'Search', 'My Ratings', 'Recommendations', 'Analytics'];
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -182,7 +182,7 @@ useEffect(() => {
       )}
 
       {/* Navigation Bar */}
-      <nav className="fixed top-0 left-0 right-0 z-40 bg-black bg-opacity-40 backdrop-blur-lg border-b border-gray-800">
+      {/* <nav className="fixed top-0 left-0 right-0 z-40 bg-black bg-opacity-40 backdrop-blur-lg border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-2">
@@ -211,7 +211,7 @@ useEffect(() => {
             </div>
           </div>
         </div>
-      </nav>
+      </nav> */}
 
       {/* Main Content */}
       <div className="relative pt-24 px-4 sm:px-6 lg:px-8 pb-16">

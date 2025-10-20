@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Link,Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
 import MyRatings from "./pages/MyRatings";
 import Recommendations from "./pages/Recommendations";
@@ -8,19 +8,28 @@ import Login from "./components/login";
 import Navbar from "./components/navbar";
 
 function App() {
+  const location = useLocation();
+  const hideNavbar = location.pathname === "/login"; // hide navbar on login page
+
   return (
     <div className="App">
-      <Router>
-        <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Home />} />
-            <Route path="/myratings" element={<MyRatings />} />
-            <Route path="/recommendations" element={<Recommendations />} />
-            <Route path="/analytics" element={<Analytics />} />
-          </Routes>
-      </Router>
+      {!hideNavbar && <Navbar />}
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/myratings" element={<MyRatings />} />
+        <Route path="/recommendations" element={<Recommendations />} />
+        <Route path="/analytics" element={<Analytics />} />
+      </Routes>
     </div>
   );
 }
 
-export default App;
+// ✅ Wrap App with Router
+export default function AppWrapper() {
+  return (
+    <Router>
+      <App />
+    </Router>
+  );
+}

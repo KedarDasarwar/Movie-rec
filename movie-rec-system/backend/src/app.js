@@ -9,6 +9,7 @@ const moviesRoutes = require('./routes/movies');
 const ratingsRoutes = require('./routes/ratings');
 const recRoutes = require('./routes/recommendations');
 const metricsRoutes = require('./routes/metrics');
+const analyticsRoutes = require('./routes/analytics');
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use('/api/movies', moviesRoutes);      // Movie listing & search
 app.use('/api/ratings', ratingsRoutes);    // Add / update / delete ratings
 app.use('/api/recommendations', recRoutes);// Content-based + CF recommendations
 app.use('/api/metrics', metricsRoutes);    // Analytics tiles & charts
+app.use('/api/analytics', analyticsRoutes);// Advanced analytics
 
 // ---------------- ERROR HANDLER ----------------
 app.use((err, req, res, next) => {

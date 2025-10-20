@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Search, Film, TrendingUp, Clock, Sparkles } from 'lucide-react';
+import { Star, Search, Film, TrendingUp, Clock, Sparkles, ChevronDown, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const MovieRecommendationApp = () => {
   const [activeNav, setActiveNav] = useState('Home');
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState(null);
@@ -13,7 +15,41 @@ const MovieRecommendationApp = () => {
   const [selectedPreview, setSelectedPreview] = useState(null);
   const [movies, setMovies] = useState([]);
   const [ratedMovies, setRatedMovies] = useState([]);
+  const [displayCount, setDisplayCount] = useState(8);
+  const [recOffset, setRecOffset] = useState(0);
+  const [recHasMore, setRecHasMore] = useState(false);
+  const [recLoading, setRecLoading] = useState(false);
+  const [showLoginOverlay, setShowLoginOverlay] = useState(false);
 
+
+  const fetchHybridPage = async (offset = 0, append = false) => {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  try {
+    setRecLoading(true);
+    const res = await fetch(`http://localhost:4000/api/recommendations/hybrid?limit=8&offset=${offset}&alpha=0.6`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    const ct = res.headers.get('content-type') || '';
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Hybrid fetch failed ${res.status}: ${text.substring(0,200)}`);
+    }
+    const data = ct.includes('application/json') ? await res.json() : { recommendations: [] };
+    const newRecs = data.recommendations || [];
+    setRecommendations(prev => append ? [...prev, ...newRecs] : newRecs);
+    setDisplayCount((append ? (prev => prev + newRecs.length) : newRecs.length));
+    setRecOffset(offset + newRecs.length);
+    setRecHasMore(newRecs.length === 8);
+    setShowRecommendations(true);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setRecLoading(false);
+  }
+};
 
   const submitRatingToBackend = async (movie) => {
   const token = localStorage.getItem('token');
@@ -34,8 +70,8 @@ const MovieRecommendationApp = () => {
 
     // ✅ After successful submission, update local state
     addOrUpdateRating({
-      id: data.ratingId,       // get rating id from backend response
-      movieId: movie.movieId,
+      id: data?.rating?.id,    // rating id from backend response
+      movieId: movie.id,
       title: movie.title,
       year: movie.year,
       genre: movie.genre,
@@ -46,6 +82,10 @@ const MovieRecommendationApp = () => {
     console.log('Rating submitted:', data);
 
     window.dispatchEvent(new Event('ratingsUpdated'));
+
+    // Fetch first page of hybrid recommendations after rating
+    setRecOffset(0);
+    await fetchHybridPage(0, false);
 
   } catch (err) {
     console.error(err);
@@ -82,9 +122,17 @@ const addOrUpdateRating = (movie) => {
 
 useEffect(() => {
   const fetchSearchResults = async () => {
+    const token = localStorage.getItem('token');
     if (!searchQuery.trim()) {
       setMovies([]);
       return;
+    }
+    if (!token) {
+      setShowLoginOverlay(true);
+      setMovies([]);
+      return;
+    } else {
+      setShowLoginOverlay(false);
     }
     try {
       const res = await fetch(`http://localhost:4000/api/movies/search?q=${encodeURIComponent(searchQuery)}`);
@@ -120,9 +168,7 @@ useEffect(() => {
       ...selectedMovie,
       rating: userRating
     }); 
-    const recs = movies.filter(m => m.id !== selectedMovie.id).slice(0, 3);
-    setRecommendations(recs);
-    setShowRecommendations(true);
+    // Recommendations fetched by submitRatingToBackend -> fetchHybridPage
   }
 };
 
@@ -132,10 +178,16 @@ useEffect(() => {
     }
   }, [userRating]);
 
-  const navItems = ['Home', 'Search', 'My Ratings', 'About'];
+  //const navItems = ['Home', 'Search', 'My Ratings', 'About'];
+  const visibleRecommendations = recommendations.slice(0, displayCount);
+
+  const handleLoginRedirect = () => {
+    setShowLoginOverlay(false);
+    navigate('/login');
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-indigo-950 to-black text-white font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white font-sans overflow-x-hidden">
       {/* Animated Background */}
       <div className="fixed inset-0 opacity-20 pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
@@ -144,7 +196,7 @@ useEffect(() => {
       </div>
 
       {/* Navigation Bar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-black bg-opacity-40 backdrop-blur-lg border-b border-gray-800">
+      {/* <nav className="fixed top-0 left-0 right-0 z-50 bg-black bg-opacity-40 backdrop-blur-lg border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-2">
@@ -173,7 +225,35 @@ useEffect(() => {
             </div>
           </div>
         </div>
-      </nav>
+      </nav> */}
+
+      {/* Login Overlay (shown when user searches while not logged in) */}
+      {showLoginOverlay && (
+        <div 
+          className={`fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-black bg-opacity-60 transition-opacity duration-500`}
+        >
+          <div className="bg-gray-900 bg-opacity-80 backdrop-blur-xl rounded-3xl p-12 border-2 border-cyan-400 shadow-2xl shadow-cyan-500/50 max-w-md w-full mx-4 transform transition-all duration-500 scale-100 hover:scale-105">
+            <div className="text-center">
+              <div className="inline-block p-6 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-full mb-6 animate-pulse">
+                <Lock className="w-12 h-12 text-white" />
+              </div>
+              <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
+                Login to See Recommendations
+              </h2>
+              <p className="text-gray-300 mb-8">
+                Please login to discover movies tailored to your taste.
+              </p>
+              <button
+                onClick={handleLoginRedirect}
+                className="w-full px-8 py-4 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-xl font-bold text-lg hover:shadow-2xl hover:shadow-cyan-500/50 transition-all duration-300 hover:scale-105 flex items-center justify-center space-x-2"
+              >
+                <Lock className="w-5 h-5" />
+                <span>Login to Continue</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="relative pt-24 px-4 sm:px-6 lg:px-8">
@@ -267,12 +347,12 @@ useEffect(() => {
                 <h2 className="text-3xl font-bold text-center">Recommended For You</h2>
                 <Sparkles className="w-6 h-6 text-purple-400" />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-16">
-                {recommendations.map((movie, index) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 pb-16">
+                {visibleRecommendations.map((movie, index) => (
                   <div
                     key={movie.id}
                     onClick={() => setSelectedPreview(movie)}
-                    className="group relative bg-gray-800 bg-opacity-50 rounded-2xl overflow-hidden border border-gray-700 hover:border-cyan-400 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/50 cursor-pointer"
+                    className="group relative bg-gray-800 bg-opacity-50 rounded-lg overflow-hidden border border-gray-700 hover:border-cyan-400 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/30 cursor-pointer"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
                     <div className="aspect-[2/3] overflow-hidden">
@@ -283,22 +363,22 @@ useEffect(() => {
                       />
                     </div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="p-4 bg-gradient-to-t from-gray-900 to-transparent">
-                      <h3 className="text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors">
+                    <div className="p-2 bg-gradient-to-t from-gray-900 to-transparent">
+                      <h3 className="text-sm font-bold mb-1 group-hover:text-cyan-400 transition-colors truncate">
                         {movie.title}
                       </h3>
-                      <div className="flex items-center justify-between text-sm text-gray-400">
-                        <span className="flex items-center space-x-1">
-                          <Clock className="w-4 h-4" />
+                      <div className="flex items-center justify-between text-xs text-gray-400">
+                        <span className="flex items-center space-x-0.5">
+                          <Clock className="w-3 h-3" />
                           <span>{movie.year}</span>
                         </span>
-                        <span className="flex items-center space-x-1">
-                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-yellow-400 font-semibold">{movie.rating}</span>
+                        <span className="flex items-center space-x-0.5">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-yellow-400 font-semibold text-xs">{movie.rating}</span>
                         </span>
                       </div>
-                      <div className="mt-2">
-                        <span className="inline-block px-3 py-1 bg-purple-500 bg-opacity-30 text-purple-300 rounded-full text-xs">
+                      <div className="mt-1">
+                        <span className="inline-block px-2 py-0.5 bg-purple-500 bg-opacity-30 text-purple-300 rounded text-xs truncate">
                           {movie.genre}
                         </span>
                       </div>
@@ -306,6 +386,18 @@ useEffect(() => {
                   </div>
                 ))}
               </div>
+
+              {recHasMore && (
+                <div className="flex justify-center pb-16">
+                  <button
+                    onClick={() => fetchHybridPage(recOffset, true)}
+                    className="flex items-center space-x-2 px-8 py-3 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-xl font-semibold hover:shadow-lg hover:shadow-cyan-500/50 transition-all animate-pulse"
+                  >
+                    <span>Load More Movies</span>
+                    <ChevronDown className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -356,7 +448,7 @@ useEffect(() => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         @keyframes fade-in {
           from {
             opacity: 0;
